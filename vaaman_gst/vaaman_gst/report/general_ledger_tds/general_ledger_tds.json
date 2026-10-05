@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-09-09 14:04:31.386156",
+ "modified": "2026-10-05 11:25:14.854019",
  "modified_by": "Administrator",
  "module": "vaaman_gst",
  "mq_filters": [],
@@ -29,6 +29,9 @@
   },
   {
    "role": "Auditor"
+  },
+  {
+   "role": "HO Accounts User Indirect Taxes"
   }
  ],
  "timeout": 0
