@@ -85,8 +85,8 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
             };
 
             // Setup actions ko refresh karein naye prototype ke sath
-            this.frm.reco_tool_actions = new PurchaseReconciliationToolAction(this.frm);
-            this.frm.reco_tool_actions.setup_actions();
+            frm.reco_tool_actions = new PurchaseReconciliationToolAction(frm);
+            frm.reco_tool_actions.setup_actions();
         }
     }
 });
