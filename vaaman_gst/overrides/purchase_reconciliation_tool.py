@@ -141,6 +141,11 @@ class CustomBuildExcel(BuildExcel):
             row["differences"] = ", ".join(diff_list) if diff_list else "Match"
 
         self.supplier_name = re.sub(r"[<>[\]?:|*]", "", data[0].get("supplier_name") or "")
+        # Envelope email names the file "{supplier}_{gstin}". The core get_file_name
+        # reads both attributes; this override was only setting the name.
+        self.supplier_gstin = (
+            data[0].get("supplier_gstin") or data[0].get("inward_supply_supplier_gstin") or ""
+        )
         return self.process_data(data, self.invoice_header)
 
     def set_headers(self):

@@ -1,3 +1,22 @@
+// Frappe 16 dropped Font Awesome from the desk bundle. India Compliance still
+// renders these action buttons with <i class="fa fa-...">, so the glyphs never
+// paint. This file is appended to the same form script, so this declaration
+// replaces get_icon before the tables render. Button classes stay the same
+// because the click handlers select .btn.eye, .btn.download and .btn.envelope.
+function get_icon(value, column, data, icon) {
+    const icons = {
+        eye: { name: "eye", title: __("View Details") },
+        download: { name: "download", title: __("Download") },
+        envelope: { name: "mail", title: __("Email") },
+    };
+    const mapped = icons[icon] || { name: icon, title: icon };
+    const hash = get_hash(data);
+
+    return `<button type="button" class="btn icon-btn ${icon}" data-name="${hash}" title="${frappe.utils.escape_html(mapped.title)}">
+        ${frappe.utils.icon(mapped.name, "sm")}
+    </button>`;
+}
+
 frappe.ui.form.on("Purchase Reconciliation Tool", {
     refresh: function(frm) {
         // PurchaseReconciliationToolAction class ko override karein
