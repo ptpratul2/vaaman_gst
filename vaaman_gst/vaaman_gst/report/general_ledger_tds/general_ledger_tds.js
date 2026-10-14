@@ -227,5 +227,5 @@ frappe.query_reports["General Ledger TDS"] = {
 	],
 };
 
-erpnext.utils.add_dimensions("General Ledger", 15);
+erpnext.utils.add_dimensions("General Ledger TDS", 15);
 

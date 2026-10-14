@@ -38,6 +38,7 @@ def execute(filters=None):
 
 	validate_filters(filters, account_details)
 	validate_party(filters)
+	set_default_tds_accounts(filters)
 	filters = set_account_currency(filters)
 
 	columns = get_columns(filters)
@@ -83,6 +84,25 @@ def validate_filters(filters, account_details):
 
 	if filters.get("cost_center"):
 		filters.cost_center = frappe.parse_json(filters.get("cost_center"))
+
+
+def set_default_tds_accounts(filters):
+	"""Keep this report on TDS ledgers.
+
+	With no Account filter the query scanned every GL Entry. A full year is
+	over a million rows and about 1 GB of JSON, which the report screen cannot
+	render, so it stays blank.
+	"""
+	if filters.get("account"):
+		return
+
+	filters.account = frappe.get_all(
+		"Account",
+		filters={"company": filters.company, "is_group": 0, "name": ["like", "%TDS%"]},
+		pluck="name",
+	)
+	if not filters.account:
+		frappe.throw(_("No TDS accounts found for {0}").format(filters.company))
 
 
 def validate_party(filters):
