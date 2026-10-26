@@ -18,6 +18,17 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
 
 PRT_MODULE = "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool"
 
+# Openpyxl rejects these in a cell (XML 1.0 illegal characters). A form-feed
+# copied into Supplier.supplier_name was aborting the whole workbook.
+_ILLEGAL_EXCEL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def excel_safe(value):
+    if isinstance(value, str):
+        return _ILLEGAL_EXCEL_CHARS.sub("", value)
+    return value
+
+
 class CustomBuildExcel(BuildExcel):
     @parse_params
     def __init__(self, doc, data, is_supplier_specific=False, email=False, selected_columns=None):
@@ -140,7 +151,9 @@ class CustomBuildExcel(BuildExcel):
             if row.get("bill_no") != row.get("inward_supply_bill_no"): diff_list.append("Bill No")
             row["differences"] = ", ".join(diff_list) if diff_list else "Match"
 
-        self.supplier_name = re.sub(r"[<>[\]?:|*]", "", data[0].get("supplier_name") or "")
+        self.supplier_name = excel_safe(
+            re.sub(r"[<>[\]?:|*]", "", data[0].get("supplier_name") or "")
+        )
         # Envelope email names the file "{supplier}_{gstin}". The core get_file_name
         # reads both attributes; this override was only setting the name.
         self.supplier_gstin = (
@@ -148,12 +161,16 @@ class CustomBuildExcel(BuildExcel):
         )
         return self.process_data(data, self.invoice_header)
 
+    def assign_value(self, field, source_data, target_data):
+        super().assign_value(field, source_data, target_data)
+        target_data[field] = excel_safe(target_data.get(field))
+
     def set_headers(self):
         """Filter headers and prevent openpyxl crashes"""
         self.match_summary_header = self.get_match_summary_columns()
         self.supplier_header = self.get_supplier_columns()
         self.invoice_header = self.get_invoice_columns()
-        
+
         if self.selected_columns:
             selected_fields = [c['value'] if isinstance(c, dict) else c for c in self.selected_columns]
             # Essential system fields
