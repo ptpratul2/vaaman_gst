@@ -239,3 +239,62 @@ def patch_build_excel():
     module.BuildExcel = CustomBuildExcel
     module.download_excel_report = download_excel_report
 
+
+def _same_company_gstin(purchase, inward_supply):
+    return (purchase.get("company_gstin") or "") == (inward_supply.get("company_gstin") or "")
+
+
+def patch_company_gstin_match():
+    """Do not pair a 2A/2B row with a purchase booked on a different company GSTIN.
+
+    The standard mismatch rules ignore company GSTIN, so a filing on one
+    registration is linked to a purchase on another. Those rows should stay
+    Only in 2A/2B and Only in Books.
+    """
+    import sys
+
+    from india_compliance.gst_india.doctype.purchase_reconciliation_tool import Reconciler
+    from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
+        purchase_reconciliation_utils as utils,
+    )
+
+    if not getattr(Reconciler.is_doc_matching, "_vaaman_company_gstin_guard", False):
+        original_is_doc_matching = Reconciler.is_doc_matching
+
+        def is_doc_matching(self, purchase, inward_supply, rules):
+            if not _same_company_gstin(purchase, inward_supply):
+                return False
+            return original_is_doc_matching(self, purchase, inward_supply, rules)
+
+        is_doc_matching._vaaman_company_gstin_guard = True
+        Reconciler.is_doc_matching = is_doc_matching
+
+    if getattr(utils.link_documents, "_vaaman_company_gstin_guard", False):
+        return
+
+    original_link_documents = utils.link_documents
+
+    def link_documents(purchase_invoice_name, inward_supply_name, link_doctype):
+        if purchase_invoice_name and inward_supply_name and link_doctype:
+            purchase_gstin = frappe.db.get_value(link_doctype, purchase_invoice_name, "company_gstin")
+            inward_gstin = frappe.db.get_value("GST Inward Supply", inward_supply_name, "company_gstin")
+            if (purchase_gstin or "") != (inward_gstin or ""):
+                frappe.throw(
+                    _(
+                        "Cannot match these documents. The purchase is booked on GSTIN {0}, "
+                        "but the 2A/2B document is reported on GSTIN {1}."
+                    ).format(purchase_gstin or _("blank"), inward_gstin or _("blank"))
+                )
+        return original_link_documents(purchase_invoice_name, inward_supply_name, link_doctype)
+
+    link_documents._vaaman_company_gstin_guard = True
+    utils.link_documents = link_documents
+
+    for module_name in (
+        PRT_MODULE,
+        "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system",
+    ):
+        module = sys.modules.get(module_name)
+        if module is not None and hasattr(module, "_link_documents"):
+            module._link_documents = link_documents
+
